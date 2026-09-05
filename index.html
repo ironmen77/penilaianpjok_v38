@@ -1020,6 +1020,7 @@ const S = {
   meta: {},
   kelas: [], siswa: [], tp: [], alokasi: [], presensi: [],
   nilai: [], bobot: [], nilaiTambahan: [], rtl: [],
+  prestasi: [], keberbakatan: [],
   akunSiswa: [], bahanBelajar: [], pengumuman: [], rtlSiswa: [],
 
   kotor: new Set(),     // koleksi yang belum tersimpan ke server
@@ -1032,8 +1033,33 @@ const S = {
 };
 
 const KOLEKSI = ["meta","kelas","siswa","tp","alokasi","presensi","nilai",
-                 "bobot","nilaiTambahan","rtl","akunSiswa","bahanBelajar",
-                 "pengumuman","rtlSiswa"];
+                 "bobot","nilaiTambahan","rtl","prestasi","keberbakatan",
+                 "akunSiswa","bahanBelajar","pengumuman","rtlSiswa"];
+
+/* Pilihan baku untuk profil siswa. Bisa ditambah guru lewat isian bebas
+   pada bidang tertentu, tapi daftar ini menjaga datanya tetap seragam
+   supaya bisa direkap. */
+const BIDANG_PRESTASI = ["Olahraga", "Seni", "Akademik", "Keagamaan",
+                         "Pramuka/Kepanduan", "Lain-lain"];
+const TINGKAT_LOMBA   = ["Sekolah", "Kecamatan", "Kabupaten/Kota",
+                         "Provinsi", "Nasional", "Internasional"];
+const PERINGKAT_LOMBA = ["Juara 1", "Juara 2", "Juara 3",
+                         "Harapan 1", "Harapan 2", "Peserta"];
+const JENIS_BAKAT     = ["Klub/Akademi Olahraga", "Klub/Akademi Seni",
+                         "Kursus Bahasa", "Bimbingan Belajar",
+                         "Kegiatan Keagamaan", "Lain-lain"];
+
+/* Ukuran antropometri. Urutan di sini menentukan urutan tampil dan ekspor. */
+const UKURAN_TUBUH = [
+  { f: "tinggiBadan",          label: "Tinggi badan",           satuan: "cm" },
+  { f: "beratBadan",           label: "Berat badan",            satuan: "kg" },
+  { f: "panjangTungkai",       label: "Panjang tungkai",        satuan: "cm" },
+  { f: "tinggiDuduk",          label: "Tinggi duduk",           satuan: "cm" },
+  { f: "rentangLengan",        label: "Rentang lengan",         satuan: "cm" },
+  { f: "panjangTelapakKaki",   label: "Panjang telapak kaki",   satuan: "cm" },
+  { f: "panjangTelapakTangan", label: "Panjang telapak tangan", satuan: "cm" },
+  { f: "panjangJengkal",       label: "Panjang jengkal",        satuan: "cm" }
+];
 
 /* ---------------------------------------------------------------------------
    UTILITAS
@@ -1443,7 +1469,8 @@ function perbaruiBannerAntrean() {
   const nama = {
     meta:"pengaturan", kelas:"kelas", siswa:"siswa", tp:"tujuan pembelajaran",
     alokasi:"alokasi TP", presensi:"presensi", nilai:"nilai", bobot:"bobot nilai",
-    nilaiTambahan:"nilai tambahan", rtl:"tindak lanjut", akunSiswa:"akun siswa",
+    nilaiTambahan:"nilai tambahan", rtl:"tindak lanjut",
+    prestasi:"prestasi siswa", keberbakatan:"keberbakatan", akunSiswa:"akun siswa",
     bahanBelajar:"materi", pengumuman:"pengumuman", rtlSiswa:"tugas siswa"
   };
   const daftar = [...S.kotor].map(k => nama[k] || k).join(", ");
@@ -2219,7 +2246,8 @@ async function tarikDariServer() {
   const petaKunci = {
     meta:"meta", kelas:"kelas", siswa:"siswa", tp:"tp", alokasi:"alokasi",
     presensi:"presensi", nilai:"nilai", bobot:"bobot",
-    nilaiTambahan:"nilaiTambahan", rtl:"rtl", akunSiswa:"akunSiswa",
+    nilaiTambahan:"nilaiTambahan", rtl:"rtl",
+    prestasi:"prestasi", keberbakatan:"keberbakatan", akunSiswa:"akunSiswa",
     bahanBelajar:"bahanBelajar", pengumuman:"pengumuman", rtlSiswa:"rtlSiswa"
   };
 
@@ -2602,6 +2630,13 @@ function gambarDaftarPerhatian(semua) {
    TAB: KELAS & SISWA
    =========================================================================== */
 function gambarKelas() {
+  // Profil siswa mengambil alih seluruh layar tab ini, supaya isiannya
+  // yang banyak tidak berdesakan di dalam modal kecil.
+  if (S._profilSiswa) {
+    $("isi-guru").innerHTML = gambarProfil(S._profilSiswa);
+    return;
+  }
+
   const barisKelas = S.kelas.map(k => `
     <tr>
       <td><b>${esc(k.nama)}</b></td>
@@ -2654,6 +2689,10 @@ function gambarKelas() {
           <div class="lekat"><button class="tbl tbl-utama" onclick="tambahSiswa()">Tambah</button></div>
         </div>
 
+        ${daftar.length ? `<div style="margin-bottom:14px">
+          <button class="tbl tbl-kecil" onclick="unduhProfil()">Unduh profil rombel</button>
+        </div>` : ""}
+
         <details class="lipat" style="margin-bottom:14px">
           <summary>Tempel banyak nama sekaligus</summary>
           <div>
@@ -2664,16 +2703,27 @@ function gambarKelas() {
         </details>
 
         ${daftar.length ? `<div class="bungkus-tabel"><table>
-            <thead><tr><th style="width:40px">#</th><th>Nama</th><th>L/P</th><th>Akun</th><th></th></tr></thead>
+            <thead><tr><th style="width:40px">#</th><th>Nama</th><th>L/P</th>
+              <th>NISN</th><th>Profil</th><th>Akun</th><th></th></tr></thead>
             <tbody>${daftar.map((s, i) => {
               const akun = S.akunSiswa.find(a => a.id === s.id);
+              // Kelengkapan profil: identitas, antropometri, riwayat.
+              const adaIdentitas = !!(rapi(s.nisn) && rapi(s.tanggalLahir));
+              const adaUkuran = UKURAN_TUBUH.some(u => angka(s[u.f]) > 0);
+              const adaRiwayat = S.prestasi.some(p => p.siswaId === s.id)
+                              || S.keberbakatan.some(b => b.siswaId === s.id);
+              const lengkap = [adaIdentitas, adaUkuran, adaRiwayat].filter(Boolean).length;
               return `<tr>
                 <td class="angka redup">${i + 1}</td>
                 <td><b>${esc(s.nama)}</b></td>
                 <td>${esc(s.jk || "-")}</td>
+                <td class="angka" style="font-size:12px">${esc(s.nisn || "—")}</td>
+                <td><span class="lencana ${lengkap === 3 ? "lencana-hijau"
+                    : lengkap ? "lencana-oranye" : "lencana-abu"}">${lengkap}/3</span></td>
                 <td>${akun ? `<span class="lencana lencana-hijau">Ada</span>`
                            : `<span class="lencana lencana-abu">Belum</span>`}</td>
-                <td style="text-align:right">
+                <td style="text-align:right;white-space:nowrap">
+                  <button class="tbl tbl-kecil" onclick="bukaProfil('${esc(s.id)}')">Profil</button>
                   <button class="tbl tbl-kecil tbl-bahaya" onclick="hapusSiswa('${esc(s.id)}')">Hapus</button>
                 </td></tr>`;
             }).join("")}</tbody></table></div>`
@@ -2710,7 +2760,7 @@ function tambahSiswa() {
   const nama = rapi($("s-nama-baru").value);
   if (!kelas) { toast("Pilih rombel dulu.", "err"); return; }
   if (!nama) { toast("Isi nama siswanya.", "err"); return; }
-  S.siswa.push({ id: uid("S"), nama, namaSiswa: nama, jk: $("s-jk").value, kelas });
+  S.siswa.push({ id: uid("S"), nama, namaSiswa: nama, jk: $("s-jk").value, kelas, ekskul: [] });
   tandai("siswa"); gambarKelas();
   $("s-nama-baru").focus();
   toast(`${nama} ditambahkan.`, "ok");
@@ -2728,7 +2778,7 @@ function imporSiswa() {
     if (!nama) return;
     S.siswa.push({
       id: uid("S"), nama, namaSiswa: nama,
-      jk: (jk || "").toUpperCase() === "P" ? "P" : "L", kelas
+      jk: (jk || "").toUpperCase() === "P" ? "P" : "L", kelas, ekskul: []
     });
     n++;
   });
@@ -2744,12 +2794,314 @@ function hapusSiswa(id) {
     "Hapus", () => {
       S.siswa = S.siswa.filter(x => x.id !== id);
       S.akunSiswa = S.akunSiswa.filter(a => a.id !== id);
-      tandai("siswa", "akunSiswa"); gambarKelas(); toast("Siswa dihapus.");
+      S.prestasi = S.prestasi.filter(p => p.siswaId !== id);
+      S.keberbakatan = S.keberbakatan.filter(b => b.siswaId !== id);
+      S._profilSiswa = null;
+      tandai("siswa", "akunSiswa", "prestasi", "keberbakatan");
+      gambarKelas(); toast("Siswa dihapus.");
     }, true);
 }
 </script>
 
 <script>
+
+/* ===========================================================================
+   PROFIL SISWA
+   Identitas, antropometri, riwayat prestasi, kegiatan luar sekolah, dan
+   ekstrakurikuler. Dibuka dari tab Kelas & Siswa.
+   =========================================================================== */
+
+function bukaProfil(idSiswa) {
+  S._profilSiswa = idSiswa;
+  gambarKelas();
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function tutupProfil() {
+  S._profilSiswa = null;
+  gambarKelas();
+}
+
+function daftarEkskul() {
+  const d = (S.meta || {}).daftarEkskul;
+  return Array.isArray(d) ? d.filter(Boolean) : [];
+}
+
+/* Indeks massa tubuh. Angkanya saja, tanpa kategori.
+   Kategori gizi anak memakai IMT menurut umur (IMT/U) dengan tabel rujukan
+   WHO yang berbeda per usia dan jenis kelamin. Menebak kategori tanpa tabel
+   itu akan menyesatkan, jadi di sini hanya ditampilkan angkanya. */
+function hitungIMT(sw) {
+  const tb = angka(sw.tinggiBadan), bb = angka(sw.beratBadan);
+  if (!tb || !bb) return null;
+  const m = tb / 100;
+  return Math.round(bb / (m * m) * 10) / 10;
+}
+
+function umurDari(tanggalLahir) {
+  if (!tanggalLahir) return null;
+  const d = new Date(tanggalLahir);
+  if (isNaN(d)) return null;
+  const kini = new Date();
+  let th = kini.getFullYear() - d.getFullYear();
+  const bl = kini.getMonth() - d.getMonth();
+  if (bl < 0 || (bl === 0 && kini.getDate() < d.getDate())) th--;
+  return th >= 0 && th < 130 ? th : null;
+}
+
+function gambarProfil(idSiswa) {
+  const sw = S.siswa.find(x => x.id === idSiswa);
+  if (!sw) return kosong("Siswa tidak ditemukan", "");
+
+  const prestasi = S.prestasi.filter(p => p.siswaId === idSiswa)
+    .sort((a, b) => String(b.tahun || "").localeCompare(String(a.tahun || "")));
+  const bakat = S.keberbakatan.filter(b => b.siswaId === idSiswa);
+  const ekskulDipilih = Array.isArray(sw.ekskul) ? sw.ekskul : [];
+  const imt = hitungIMT(sw);
+  const umur = umurDari(sw.tanggalLahir);
+
+  return `
+    <div class="kepala-halaman">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <button class="tbl tbl-kecil" onclick="tutupProfil()">‹ Kembali</button>
+        <div class="avatar" style="width:46px;height:46px;font-size:16px">${esc(inisial(sw.nama))}</div>
+        <div style="flex:1;min-width:180px">
+          <h1 style="font-size:22px">${esc(sw.nama)}</h1>
+          <p>${esc(sw.kelas)}${sw.nisn ? ` · NISN ${esc(sw.nisn)}` : ""}${
+            umur !== null ? ` · ${umur} tahun` : ""}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="kartu">
+      <div class="kartu-judul"><h2>Identitas</h2></div>
+      <div class="petak petak-2">
+        <label class="kolom" style="margin:0"><span>Nama lengkap</span>
+          <input type="text" id="pf-nama" value="${esc(sw.nama)}"></label>
+        <label class="kolom" style="margin:0"><span>NISN</span>
+          <input type="text" id="pf-nisn" value="${esc(sw.nisn || "")}"
+                 inputmode="numeric" maxlength="10" placeholder="10 digit"></label>
+        <label class="kolom" style="margin:0"><span>Jenis kelamin</span>
+          <select id="pf-jk">
+            <option value="L" ${sw.jk === "L" ? "selected" : ""}>Laki-laki</option>
+            <option value="P" ${sw.jk === "P" ? "selected" : ""}>Perempuan</option>
+          </select></label>
+        <label class="kolom" style="margin:0"><span>Rombel</span>
+          <select id="pf-kelas">${opsiKelas(sw.kelas)}</select></label>
+        <label class="kolom" style="margin:0"><span>Tempat lahir</span>
+          <input type="text" id="pf-tempat" value="${esc(sw.tempatLahir || "")}"
+                 placeholder="Jakarta"></label>
+        <label class="kolom" style="margin:0"><span>Tanggal lahir</span>
+          <input type="date" id="pf-lahir" value="${esc((sw.tanggalLahir || "").slice(0, 10))}"></label>
+      </div>
+    </div>
+
+    <div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Antropometri</h2>
+          <p class="redup">Ukuran tubuh untuk analisis gerak dan pertumbuhan</p></div>
+        ${imt !== null ? `<span class="lencana lencana-abu">IMT ${imt}</span>` : ""}
+      </div>
+
+      <div class="petak petak-4">
+        ${UKURAN_TUBUH.map(u => `
+          <label class="kolom" style="margin:0"><span>${esc(u.label)} (${u.satuan})</span>
+            <input type="number" step="0.1" min="0" inputmode="decimal"
+                   id="pf-${u.f}" value="${sw[u.f] ? angka(sw[u.f]) : ""}"></label>`).join("")}
+      </div>
+
+      <label class="kolom" style="margin-top:14px;max-width:260px"><span>Tanggal pengukuran</span>
+        <input type="date" id="pf-tglukur" value="${esc((sw.tanggalUkur || "").slice(0, 10))}"></label>
+
+      ${imt !== null ? `<p class="redup" style="font-size:12.5px">
+        IMT dihitung dari tinggi dan berat badan. Kategori gizi anak memakai
+        IMT menurut umur dengan tabel rujukan WHO, jadi angka ini sengaja tidak
+        diberi label sehat atau tidak.
+      </p>` : ""}
+    </div>
+
+    <div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Ekstrakurikuler</h2>
+          <p class="redup">Daftar pilihan diatur di tab Pengaturan</p></div>
+      </div>
+      ${daftarEkskul().length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${daftarEkskul().map(e => `
+            <label style="display:flex;align-items:center;gap:7px;padding:7px 13px;
+              border:1px solid ${ekskulDipilih.includes(e) ? "var(--rumput)" : "var(--garis-tebal)"};
+              background:${ekskulDipilih.includes(e) ? "var(--rumput-pias)" : "var(--kapur)"};
+              border-radius:var(--r-m);cursor:pointer;font-size:13.5px">
+              <input type="checkbox" class="cek-ekskul" value="${esc(e)}" style="width:auto"
+                     ${ekskulDipilih.includes(e) ? "checked" : ""}>${esc(e)}</label>`).join("")}
+        </div>`
+        : `<p class="redup" style="font-size:13px">
+            Belum ada daftar ekstrakurikuler.
+            <a href="#" onclick="bukaTab('aturan');return false"
+               style="color:var(--rumput);font-weight:600">Atur di Pengaturan</a> dulu.</p>`}
+    </div>
+
+    <button class="tbl tbl-utama tbl-blok" onclick="simpanProfil('${esc(idSiswa)}')">
+      Simpan identitas, antropometri, dan ekskul
+    </button>
+
+    <div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Pemantauan prestasi</h2>
+          <p class="redup">Lomba, kejuaraan, dan pertandingan yang pernah diikuti</p></div>
+        <span class="lencana lencana-abu">${prestasi.length} catatan</span>
+      </div>
+
+      <div class="petak petak-3">
+        <label class="kolom" style="margin:0"><span>Bidang</span>
+          <select id="pr-bidang">${BIDANG_PRESTASI.map(b => `<option>${b}</option>`).join("")}</select></label>
+        <label class="kolom" style="margin:0"><span>Cabang</span>
+          <input type="text" id="pr-cabang" placeholder="Bulu tangkis, tari, dsb"></label>
+        <label class="kolom" style="margin:0"><span>Nama perlombaan</span>
+          <input type="text" id="pr-lomba" placeholder="O2SN, FLS2N, dsb"></label>
+        <label class="kolom" style="margin:0"><span>Tingkat</span>
+          <select id="pr-tingkat">${TINGKAT_LOMBA.map(t => `<option>${t}</option>`).join("")}</select></label>
+        <label class="kolom" style="margin:0"><span>Peringkat</span>
+          <select id="pr-peringkat">${PERINGKAT_LOMBA.map(t => `<option>${t}</option>`).join("")}</select></label>
+        <label class="kolom" style="margin:0"><span>Tahun</span>
+          <input type="number" id="pr-tahun" min="2000" max="2100"
+                 value="${new Date().getFullYear()}"></label>
+      </div>
+      <button class="tbl tbl-blok" style="margin-top:12px"
+              onclick="tambahPrestasi('${esc(idSiswa)}')">+ Tambah catatan prestasi</button>
+
+      ${prestasi.length ? `<div class="bungkus-tabel" style="margin-top:16px"><table>
+        <thead><tr><th>Tahun</th><th>Bidang</th><th>Cabang</th><th>Perlombaan</th>
+          <th>Tingkat</th><th>Peringkat</th><th></th></tr></thead>
+        <tbody>${prestasi.map(p => `<tr>
+          <td class="angka">${esc(p.tahun || "-")}</td>
+          <td>${esc(p.bidang || "-")}</td>
+          <td>${esc(p.cabang || "-")}</td>
+          <td>${esc(p.namaLomba || "-")}</td>
+          <td>${esc(p.tingkat || "-")}</td>
+          <td>${/Juara/.test(p.peringkat || "")
+            ? `<span class="lencana lencana-emas">${esc(p.peringkat)}</span>`
+            : `<span class="lencana lencana-abu">${esc(p.peringkat || "-")}</span>`}</td>
+          <td style="text-align:right">
+            <button class="tbl tbl-kecil tbl-bahaya" onclick="hapusPrestasi('${esc(p.id)}')">×</button>
+          </td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="redup" style="margin-top:14px;font-size:13px">Belum ada catatan prestasi.</p>`}
+    </div>
+
+    <div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Pemantauan keberbakatan</h2>
+          <p class="redup">Kegiatan murid di luar sekolah</p></div>
+        <span class="lencana lencana-abu">${bakat.length} kegiatan</span>
+      </div>
+
+      <div class="petak petak-2">
+        <label class="kolom" style="margin:0"><span>Jenis kegiatan</span>
+          <select id="kb-jenis">${JENIS_BAKAT.map(j => `<option>${j}</option>`).join("")}</select></label>
+        <label class="kolom" style="margin:0"><span>Nama kegiatan, tempat, atau klub</span>
+          <input type="text" id="kb-nama" placeholder="PB Jaya Raya"></label>
+        <label class="kolom" style="margin:0"><span>Berapa kali seminggu</span>
+          <input type="number" id="kb-frek" min="1" max="14" value="2"></label>
+        <label class="kolom" style="margin:0"><span>Sejak kapan</span>
+          <input type="date" id="kb-sejak"></label>
+      </div>
+      <label class="kolom" style="margin-top:12px"><span>Catatan lainnya</span>
+        <input type="text" id="kb-catatan" placeholder="Opsional"></label>
+      <button class="tbl tbl-blok" onclick="tambahKeberbakatan('${esc(idSiswa)}')">
+        + Tambah kegiatan</button>
+
+      ${bakat.length ? `<div style="margin-top:16px">
+        ${bakat.map(b => `<div class="item-daftar">
+          <div class="badan">
+            <b>${esc(b.namaKegiatan || "-")}</b>
+            <small>${esc(b.jenis || "")}${b.frekuensi ? ` · ${angka(b.frekuensi)}× seminggu` : ""}${
+              b.sejak ? ` · sejak ${tglIndo(b.sejak)}` : ""}</small>
+            ${b.catatan ? `<small style="display:block">${esc(b.catatan)}</small>` : ""}
+          </div>
+          <button class="tbl tbl-kecil tbl-bahaya" onclick="hapusKeberbakatan('${esc(b.id)}')">×</button>
+        </div>`).join("")}
+      </div>`
+        : `<p class="redup" style="margin-top:14px;font-size:13px">Belum ada kegiatan tercatat.</p>`}
+    </div>`;
+}
+
+function simpanProfil(idSiswa) {
+  const sw = S.siswa.find(x => x.id === idSiswa); if (!sw) return;
+  const nama = rapi($("pf-nama").value);
+  if (!nama) { toast("Nama tidak boleh kosong.", "err"); return; }
+
+  const nisn = rapi($("pf-nisn").value);
+  if (nisn && !/^\d{8,12}$/.test(nisn)) {
+    toast("NISN biasanya 10 digit angka. Periksa lagi.", "err"); return;
+  }
+
+  sw.nama = nama; sw.namaSiswa = nama;
+  sw.nisn = nisn;
+  sw.jk = $("pf-jk").value;
+  sw.kelas = $("pf-kelas").value || sw.kelas;
+  sw.tempatLahir = rapi($("pf-tempat").value);
+  sw.tanggalLahir = $("pf-lahir").value;
+  sw.tanggalUkur = $("pf-tglukur").value;
+
+  UKURAN_TUBUH.forEach(u => {
+    const v = rapi($("pf-" + u.f).value);
+    sw[u.f] = v === "" ? "" : angka(v);
+  });
+
+  sw.ekskul = [...document.querySelectorAll(".cek-ekskul:checked")].map(x => x.value);
+
+  tandai("siswa");
+  gambarKelas();
+  toast(`Profil ${nama} tersimpan.`, "ok");
+}
+
+function tambahPrestasi(idSiswa) {
+  const sw = S.siswa.find(x => x.id === idSiswa); if (!sw) return;
+  const cabang = rapi($("pr-cabang").value);
+  const lomba = rapi($("pr-lomba").value);
+  if (!cabang && !lomba) {
+    toast("Isi cabang atau nama perlombaannya.", "err"); return;
+  }
+  S.prestasi.push({
+    id: uid("PR"), siswaId: idSiswa, nama: sw.nama, namaSiswa: sw.nama, kelas: sw.kelas,
+    bidang: $("pr-bidang").value, cabang, namaLomba: lomba,
+    tingkat: $("pr-tingkat").value, peringkat: $("pr-peringkat").value,
+    tahun: rapi($("pr-tahun").value), timestamp: kini()
+  });
+  tandai("prestasi"); gambarKelas();
+  toast("Catatan prestasi ditambahkan.", "ok");
+}
+
+function hapusPrestasi(id) {
+  konfirmasi("Hapus catatan prestasi?", "", "Hapus", () => {
+    S.prestasi = S.prestasi.filter(p => p.id !== id);
+    tandai("prestasi"); gambarKelas();
+  }, true);
+}
+
+function tambahKeberbakatan(idSiswa) {
+  const sw = S.siswa.find(x => x.id === idSiswa); if (!sw) return;
+  const namaKegiatan = rapi($("kb-nama").value);
+  if (!namaKegiatan) { toast("Isi nama kegiatan, tempat, atau klubnya.", "err"); return; }
+
+  S.keberbakatan.push({
+    id: uid("KB"), siswaId: idSiswa, nama: sw.nama, namaSiswa: sw.nama, kelas: sw.kelas,
+    jenis: $("kb-jenis").value, namaKegiatan,
+    frekuensi: parseInt($("kb-frek").value) || 1,
+    sejak: $("kb-sejak").value, catatan: rapi($("kb-catatan").value),
+    timestamp: kini()
+  });
+  tandai("keberbakatan"); gambarKelas();
+  toast("Kegiatan ditambahkan.", "ok");
+}
+
+function hapusKeberbakatan(id) {
+  konfirmasi("Hapus kegiatan ini?", "", "Hapus", () => {
+    S.keberbakatan = S.keberbakatan.filter(b => b.id !== id);
+    tandai("keberbakatan"); gambarKelas();
+  }, true);
+}
+
 /* ===========================================================================
    TAB: TUJUAN PEMBELAJARAN
    =========================================================================== */
@@ -4645,6 +4997,29 @@ function gambarPengaturan() {
 
     <div class="kartu">
       <div class="kartu-judul">
+        <div><h2>Ekstrakurikuler</h2>
+          <p class="redup">Daftar pilihan yang muncul di profil siswa</p></div>
+      </div>
+      <div class="baris">
+        <label class="kolom" style="margin:0"><span>Nama ekstrakurikuler</span>
+          <input type="text" id="m-ekskul-baru" placeholder="Futsal, Pramuka, Tari, dsb"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();tambahEkskul()}"></label>
+        <div class="lekat"><button class="tbl tbl-utama" onclick="tambahEkskul()">Tambah</button></div>
+      </div>
+      ${daftarEkskul().length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+        ${daftarEkskul().map(e => `
+          <span class="lencana lencana-abu" style="padding:7px 11px;font-size:13px;font-weight:600">
+            ${esc(e)}
+            <button onclick="hapusEkskul('${esc(e)}')" aria-label="Hapus ${esc(e)}"
+              style="background:none;border:none;cursor:pointer;color:var(--bahaya);
+                     font-size:15px;line-height:1;padding:0 0 0 4px">×</button>
+          </span>`).join("")}
+      </div>` : `<p class="redup" style="margin-top:12px;font-size:13px">
+        Belum ada daftar. Tambahkan supaya guru tinggal memilih di profil siswa.</p>`}
+    </div>
+
+    <div class="kartu">
+      <div class="kartu-judul">
         <div><h2>Aturan penilaian</h2>
           <p class="redup">Berlaku untuk seluruh rombel</p></div>
       </div>
@@ -4731,6 +5106,39 @@ function simpanPengaturan() {
   const pg = $("puncak-guru");
   if (pg) pg.textContent = namaGuru() || S.user.email;
   toast("Pengaturan tersimpan.", "ok");
+}
+
+function tambahEkskul() {
+  const nama = rapi($("m-ekskul-baru").value);
+  if (!nama) { toast("Isi nama ekstrakurikulernya.", "err"); return; }
+  const daftar = daftarEkskul();
+  if (daftar.some(e => e.toLowerCase() === nama.toLowerCase())) {
+    toast(`${nama} sudah ada di daftar.`, "err"); return;
+  }
+  S.meta = { ...S.meta, daftarEkskul: [...daftar, nama] };
+  tandai("meta"); gambarPengaturan();
+  toast(`${nama} ditambahkan.`, "ok");
+}
+
+function hapusEkskul(nama) {
+  // Siswa yang sudah terlanjur mengikuti ekskul ini ikut dilepas, supaya
+  // tidak ada data yang menunjuk ke pilihan yang sudah tidak ada.
+  const dipakai = S.siswa.filter(sw =>
+    Array.isArray(sw.ekskul) && sw.ekskul.includes(nama)).length;
+
+  konfirmasi(`Hapus ${nama} dari daftar?`,
+    dipakai ? `${dipakai} siswa tercatat mengikuti ekskul ini. Catatan itu ikut dilepas.` : "",
+    "Hapus", () => {
+      S.meta = { ...S.meta, daftarEkskul: daftarEkskul().filter(e => e !== nama) };
+      let ubah = false;
+      S.siswa.forEach(sw => {
+        if (Array.isArray(sw.ekskul) && sw.ekskul.includes(nama)) {
+          sw.ekskul = sw.ekskul.filter(e => e !== nama); ubah = true;
+        }
+      });
+      tandai(...(ubah ? ["meta", "siswa"] : ["meta"]));
+      gambarPengaturan();
+    }, true);
 }
 
 // Pratayang logo dan latar tanpa menyimpan, supaya guru bisa mengecek dulu
@@ -4947,6 +5355,44 @@ function unduhPresensi() {
   });
 }
 
+/* Ekspor profil satu rombel: identitas, antropometri, dan rekap riwayat.
+   Berguna untuk laporan ke sekolah atau bahan analisis pertumbuhan. */
+function unduhProfil() {
+  const kelas = S._kelasSiswa || (S.kelas[0] && S.kelas[0].nama);
+  if (!kelas) { toast("Pilih rombel dulu.", "err"); return; }
+  const daftar = siswaKelas(kelas);
+  if (!daftar.length) { toast("Rombel ini belum punya siswa.", "err"); return; }
+
+  const kepala = ["No", "Nama", "NISN", "L/P", "Tempat lahir", "Tanggal lahir", "Umur",
+    ...UKURAN_TUBUH.map(u => `${u.label} (${u.satuan})`),
+    "IMT", "Tanggal ukur", "Ekstrakurikuler", "Jumlah prestasi", "Kegiatan luar sekolah"];
+
+  const baris = [kepala];
+  daftar.forEach((sw, i) => {
+    const imt = hitungIMT(sw);
+    const umur = umurDari(sw.tanggalLahir);
+    baris.push([
+      i + 1, sw.nama, sw.nisn || "", sw.jk || "",
+      sw.tempatLahir || "", sw.tanggalLahir ? tglIndo(sw.tanggalLahir) : "",
+      umur === null ? "" : umur,
+      ...UKURAN_TUBUH.map(u => sw[u.f] ? angka(sw[u.f]) : ""),
+      imt === null ? "" : imt,
+      sw.tanggalUkur ? tglIndo(sw.tanggalUkur) : "",
+      (Array.isArray(sw.ekskul) ? sw.ekskul : []).join(", "),
+      S.prestasi.filter(p => p.siswaId === sw.id).length,
+      S.keberbakatan.filter(b => b.siswaId === sw.id).length
+    ]);
+  });
+
+  unduhXLS(`Profil_${kelas}_${new Date().toISOString().slice(0, 10)}.xls`, baris, {
+    judul: `Profil Peserta Didik — ${kelas}`,
+    subjudul: "Identitas, antropometri, dan rekap riwayat",
+    namaLembar: `Profil ${kelas}`,
+    lebar: [40, 190, 100, 50, 120, 110, 50],
+    rataTengah: kepala.map((_, i) => i).filter(i => i !== 1 && i !== 4)
+  });
+}
+
 function unduhAkun() {
   const kelas = S._akKelas;
   const daftar = siswaKelas(kelas);
@@ -5115,10 +5561,14 @@ async function mulaiPortalSiswa() {
   S.bahanBelajar = r.bahanBelajar || [];
   S.pengumuman = r.pengumuman || [];
   S.meta = r.meta || {};
+  S.prestasi = r.prestasi || [];
+  S.keberbakatan = r.keberbakatan || [];
   S.alokasi = [];
   // Mesin penilaian bekerja atas S.siswa, jadi siswa yang sedang masuk
   // didaftarkan sebagai satu-satunya entri.
-  S.siswa = [{ id: s.idSiswa, nama: s.nama, namaSiswa: s.nama, kelas: s.kelas }];
+  S.siswa = [r.profil
+    ? { ...r.profil, id: s.idSiswa, nama: s.nama, namaSiswa: s.nama, kelas: s.kelas }
+    : { id: s.idSiswa, nama: s.nama, namaSiswa: s.nama, kelas: s.kelas }];
 
   isiLogo("kotak-logo-siswa", S.meta.logoUrl);
   bukaTabSiswa("beranda");
