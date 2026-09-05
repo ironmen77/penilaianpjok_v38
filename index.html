@@ -5949,15 +5949,114 @@ function bukaKumpulTugas(idTugas) {
 
 function portalSaya() {
   const s = S.siswaAktif;
+  // Profil siswa dikirim server dan disimpan sebagai satu-satunya entri S.siswa.
+  const p = S.siswa.find(x => x.id === s.idSiswa) || {};
+  const umur = umurDari(p.tanggalLahir);
+  const ekskul = Array.isArray(p.ekskul) ? p.ekskul.filter(Boolean) : [];
+
+  const prestasi = S.prestasi.filter(x => x.siswaId === s.idSiswa)
+    .sort((a, b) => String(b.tahun || "").localeCompare(String(a.tahun || "")));
+  const bakat = S.keberbakatan.filter(x => x.siswaId === s.idSiswa);
+
+  const tb = angka(p.tinggiBadan), bb = angka(p.beratBadan);
+  const adaUkuran = tb > 0 || bb > 0;
+
+  const barisIdentitas = (label, isi) => isi
+    ? `<div class="item-daftar">
+         <div class="badan"><small>${esc(label)}</small><b>${esc(isi)}</b></div>
+       </div>` : "";
+
   $("isi-siswa").innerHTML =
-    kepala("Profil", "Akun dan kata sandimu") + `
+    kepala("Profil", "Data dirimu di pelajaran PJOK") + `
 
     <div class="kartu">
       <div style="display:flex;align-items:center;gap:14px">
         <div class="avatar" style="width:56px;height:56px;font-size:20px">${esc(inisial(s.nama))}</div>
-        <div>
+        <div style="flex:1;min-width:0">
           <div style="font-size:17px;font-weight:700">${esc(s.nama)}</div>
           <div class="redup" style="font-size:13px">${esc(s.kelas)} · ${esc(s.email)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kartu">
+      <div class="kartu-judul"><h2>Identitas</h2></div>
+      ${barisIdentitas("NISN", p.nisn)}
+      ${barisIdentitas("Tempat lahir", p.tempatLahir)}
+      ${barisIdentitas("Tanggal lahir",
+        p.tanggalLahir ? tglIndo(p.tanggalLahir) + (umur !== null ? ` · ${umur} tahun` : "") : "")}
+      ${barisIdentitas("Jenis kelamin", p.jk === "P" ? "Perempuan" : p.jk === "L" ? "Laki-laki" : "")}
+      ${!p.nisn && !p.tempatLahir && !p.tanggalLahir
+        ? `<p class="redup" style="font-size:13px">Gurumu belum mengisi data ini.</p>` : ""}
+    </div>
+
+    ${adaUkuran ? `<div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Catatan pengukuran</h2>
+          ${p.tanggalUkur ? `<p class="redup">Diukur ${tglIndo(p.tanggalUkur)}</p>` : ""}</div>
+      </div>
+      <div class="petak petak-2">
+        ${tb > 0 ? `<div class="statistik">
+          <div class="nilai angka">${tb}<span style="font-size:15px;font-weight:600"> cm</span></div>
+          <div class="label">Tinggi badan</div></div>` : ""}
+        ${bb > 0 ? `<div class="statistik">
+          <div class="nilai angka">${bb}<span style="font-size:15px;font-weight:600"> kg</span></div>
+          <div class="label">Berat badan</div></div>` : ""}
+      </div>
+      <p class="redup" style="font-size:12.5px;margin-top:12px">
+        Angka ini dicatat gurumu untuk pelajaran PJOK. Setiap anak tumbuh dengan
+        kecepatan berbeda, jadi angka ini tidak untuk dibandingkan dengan teman.
+      </p>
+    </div>` : ""}
+
+    ${ekskul.length ? `<div class="kartu">
+      <div class="kartu-judul"><h2>Ekstrakurikuler</h2></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${ekskul.map(e => `<span class="lencana lencana-hijau"
+          style="padding:7px 13px;font-size:13.5px">${esc(e)}</span>`).join("")}
+      </div>
+    </div>` : ""}
+
+    ${prestasi.length ? `<div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Prestasi</h2><p class="redup">Lomba yang pernah kamu ikuti</p></div>
+        <span class="lencana lencana-emas">${prestasi.length}</span>
+      </div>
+      ${prestasi.map(x => `<div class="item-daftar">
+        <div class="badan">
+          <b>${esc(x.namaLomba || x.cabang || "-")}</b>
+          <small>${[x.bidang, x.cabang, x.tingkat, x.tahun].filter(Boolean).map(esc).join(" · ")}</small>
+        </div>
+        ${/Juara/.test(x.peringkat || "")
+          ? `<span class="lencana lencana-emas">${esc(x.peringkat)}</span>`
+          : `<span class="lencana lencana-abu">${esc(x.peringkat || "-")}</span>`}
+      </div>`).join("")}
+    </div>` : ""}
+
+    ${bakat.length ? `<div class="kartu">
+      <div class="kartu-judul">
+        <div><h2>Kegiatan di luar sekolah</h2></div>
+      </div>
+      ${bakat.map(x => `<div class="item-daftar">
+        <div class="badan">
+          <b>${esc(x.namaKegiatan || "-")}</b>
+          <small>${esc(x.jenis || "")}${x.frekuensi ? ` · ${angka(x.frekuensi)}× seminggu` : ""}${
+            x.sejak ? ` · sejak ${tglIndo(x.sejak)}` : ""}</small>
+        </div>
+      </div>`).join("")}
+    </div>` : ""}
+
+    <div class="kartu" style="border-color:var(--garis-tebal)">
+      <div style="display:flex;gap:11px;align-items:flex-start">
+        <span style="font-size:17px">✎</span>
+        <div>
+          <b style="display:block;margin-bottom:3px">Ada data yang keliru?</b>
+          <p class="redup" style="font-size:13px">
+            Profil hanya bisa diubah oleh gurumu. Kalau ada yang salah atau
+            prestasimu belum tercatat, sampaikan lewat menu Pesan.
+          </p>
+          <button class="tbl tbl-kecil" style="margin-top:10px"
+                  onclick="bukaTabSiswa('pesan')">Kirim pesan ke guru</button>
         </div>
       </div>
     </div>
