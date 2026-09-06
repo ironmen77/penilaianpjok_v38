@@ -1,4 +1,38 @@
 <!DOCTYPE html>
+<!--
+ ==============================================================================
+  PJOK SMART ASSESSMENT PRO — V38
+  Aplikasi digitalisasi pembelajaran PJOK (Kurikulum Merdeka):
+  materi, presensi, dan penilaian holistik peserta didik.
+
+  Hak Cipta © 2026 Oryza Sativa N (@Gurumasakini). Seluruh hak dilindungi.
+
+  Karya ini dilindungi Undang-Undang Nomor 28 Tahun 2014 tentang Hak Cipta.
+  Program komputer termasuk ciptaan yang dilindungi (Pasal 40 ayat 1 huruf s),
+  dan perlindungannya berlaku sejak ciptaan diwujudkan, tanpa perlu didaftarkan.
+
+  DIIZINKAN
+    Dipakai oleh satuan pendidikan untuk keperluan pembelajaran.
+    Disesuaikan identitas sekolahnya lewat menu Pengaturan.
+
+  TIDAK DIIZINKAN TANPA IZIN TERTULIS PEMEGANG HAK CIPTA
+    Menggandakan, memodifikasi, atau mendistribusikan ulang kode ini.
+    Menghapus atau mengubah pemberitahuan hak cipta ini.
+    Mengklaim sebagai karya sendiri, sebagian maupun seluruhnya.
+    Menjual atau menyewakan, baik utuh maupun sebagian.
+
+  Perlu izin, kerja sama, atau pelaporan penyalahgunaan:
+    Instagram : @ryzaraccman
+    YouTube   : @gurumasakini
+
+  CATATAN TEKNIS YANG PERLU DIPAHAMI PEMILIK
+  Berkas HTML dikirim utuh ke peramban setiap pengunjung, jadi isinya selalu
+  bisa dibaca dan disalin oleh siapa pun. Pemberitahuan ini adalah pernyataan
+  hukum, bukan penghalang teknis — dan memang di situlah kekuatannya. Yang
+  benar-benar tidak bisa disalin adalah DATA sekolah, karena tersimpan di
+  Google Sheets milikmu dan dilindungi kata sandi, bukan di berkas ini.
+ ==============================================================================
+-->
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -884,7 +918,9 @@ body.sudah-masuk .tbl-mengambang { display: none; }
     </div>
 
     <p class="hak-cipta">
-      © <a href="https://youtube.com/@gurumasakini" target="_blank" rel="noopener">@Gurumasakini</a> 2026 — Oryza Sativa N
+      © 2026 <a href="https://youtube.com/@gurumasakini" target="_blank" rel="noopener">@Gurumasakini</a>
+      — Oryza Sativa N<br>
+      <span style="font-size:11px;opacity:.8">Seluruh hak dilindungi undang-undang</span>
     </p>
   </div>
 </div>
@@ -5256,6 +5292,11 @@ function unduhXLS(namaBerkas, baris, opsi = {}) {
 
   html += "</table>";
 
+  // Tanda kepemilikan ikut terbawa di setiap berkas yang diekspor.
+  html += `<table><tr><td colspan="${kolomTotal}"
+    style="border:none;padding:10px 6px 2px;font-size:8pt;color:#7d8c84">
+    ${esc(HAK_CIPTA)} · Dibuat dengan PJOK Smart Assessment Pro</td></tr></table>`;
+
   const dok = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head>
     <meta charset="UTF-8">
     <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
@@ -5498,6 +5539,10 @@ function cetakRapor(kelas) {
           </td>
         </tr>
       </table>
+
+      <p style="font-size:8pt;color:#888;text-align:center;margin-top:26px">
+        ${esc(HAK_CIPTA)} · PJOK Smart Assessment Pro
+      </p>
     </div>`).join("");
 
   if (!halaman) { toast("Belum ada siswa yang punya nilai sumatif.", "err"); return; }
@@ -5564,6 +5609,16 @@ async function mulaiPortalSiswa() {
   S.prestasi = r.prestasi || [];
   S.keberbakatan = r.keberbakatan || [];
   S.alokasi = [];
+
+  /* Bedakan tiga sebab profil kosong, supaya tidak semuanya tampak sama:
+     - field profil tidak ada sama sekali  -> server masih versi lama
+     - field ada tapi null                 -> data siswa tidak ditemukan
+     - ada isinya                          -> normal
+     Tanpa pembeda ini, "profil tidak muncul" bisa berarti tiga hal berbeda
+     dan pengguna tidak punya petunjuk mana yang sedang terjadi. */
+  S._sebabProfil = (r.profil === undefined) ? "server-lama"
+                 : (r.profil === null)      ? "tidak-ditemukan"
+                 : "";
   // Mesin penilaian bekerja atas S.siswa, jadi siswa yang sedang masuk
   // didaftarkan sebagai satu-satunya entri.
   S.siswa = [r.profil
@@ -5986,8 +6041,14 @@ function portalSaya() {
       ${barisIdentitas("Tanggal lahir",
         p.tanggalLahir ? tglIndo(p.tanggalLahir) + (umur !== null ? ` · ${umur} tahun` : "") : "")}
       ${barisIdentitas("Jenis kelamin", p.jk === "P" ? "Perempuan" : p.jk === "L" ? "Laki-laki" : "")}
-      ${!p.nisn && !p.tempatLahir && !p.tanggalLahir
-        ? `<p class="redup" style="font-size:13px">Gurumu belum mengisi data ini.</p>` : ""}
+      ${!p.nisn && !p.tempatLahir && !p.tanggalLahir ? `
+        <p class="redup" style="font-size:13px">
+          ${S._sebabProfil === "server-lama"
+            ? "Aplikasi sekolah perlu diperbarui gurumu agar profil bisa tampil."
+            : S._sebabProfil === "tidak-ditemukan"
+            ? "Data profilmu belum terhubung. Beri tahu gurumu."
+            : "Gurumu belum mengisi data ini."}
+        </p>` : ""}
     </div>
 
     ${adaUkuran ? `<div class="kartu">
@@ -6341,7 +6402,25 @@ async function portalPesan() {
    MULA
    =========================================================================== */
 
+const HAK_CIPTA = "© 2026 Oryza Sativa N (@Gurumasakini)";
+
+/* Tanda hak cipta di konsol peramban. Orang pertama yang membuka DevTools
+   untuk menyalin kode ini akan melihatnya lebih dulu. */
+function tandaHakCipta() {
+  try {
+    console.log("%cPJOK Smart Assessment Pro — V38",
+      "font-size:15px;font-weight:bold;color:#14532d");
+    console.log("%c" + HAK_CIPTA + " · Seluruh hak dilindungi.",
+      "font-size:12px;color:#4a5b52");
+    console.log("%cDilindungi UU No. 28 Tahun 2014 tentang Hak Cipta.\n" +
+      "Dilarang menggandakan atau mendistribusikan ulang tanpa izin tertulis.\n" +
+      "Izin dan kerja sama: Instagram @ryzaraccman",
+      "font-size:11px;color:#7d8c84");
+  } catch {}
+}
+
 (function mula() {
+  tandaHakCipta();
   S.gelap = localStorage.getItem("pjok_gelap") === "1";
   terapkanMode();
 
