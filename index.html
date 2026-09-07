@@ -1014,15 +1014,23 @@ body.sudah-masuk .tbl-mengambang { display: none; }
 
 /* ===========================================================================
    >>> ISI DI SINI SEBELUM MEMBAGIKAN <<<
-   Tempel URL web app Google Apps Script di antara tanda kutip. Kalau diisi,
-   SEMUA orang yang membuka aplikasi ini — guru maupun siswa — langsung
-   terhubung ke server tanpa perlu setting apa pun. Siswa yang login dari HP
-   sendiri tidak lagi mentok di layar "belum terhubung".
+
+   Tempel URL web app Google Apps Script di antara tanda kutip. Contoh:
+     const SERVER_BAWAAN = "https://script.google.com/macros/s/AKfy.../exec";
+
+   Kalau diisi, SEMUA orang yang membuka aplikasi ini — guru dari laptop mana
+   pun, siswa dari HP masing-masing — LANGSUNG TERHUBUNG tanpa mengatur apa
+   pun. Cukup login. Pindah perangkat, ganti peramban, atau hapus riwayat
+   tidak membuat alamatnya hilang, karena tersimpan di dalam berkas ini,
+   bukan di penyimpanan peramban.
+
+   Ambil URL-nya di Apps Script: Deploy > Manage deployments > salin URL
+   yang berakhiran /exec.
 
    Biarkan kosong hanya kalau kamu memang ingin setiap perangkat mengatur
-   alamatnya sendiri lewat panel admin (kode 112233).
+   alamatnya sendiri lewat panel admin (kode akses di tombol kanan bawah).
    =========================================================================== */
-const SERVER_BAWAAN = "";
+const SERVER_BAWAAN = "https://script.google.com/macros/s/AKfycbzv7QGEExYzGoBn410qz9qqtFM-fTJDdniR0Fn6oP1OwR5fVhT_IRT8G-N_TP32NyDd/exec";
 
 /* ---------------------------------------------------------------------------
    SUPABASE — hanya dipakai untuk fitur Pesan.
@@ -1348,8 +1356,31 @@ function terapkanIdentitas() {
 // Urutan: alamat yang sedang dipakai sesi ini > yang disimpan admin di
 // perangkat ini > alamat bawaan yang ditanam di berkas. Bawaan membuat siswa
 // bisa langsung login dari HP sendiri tanpa menyentuh pengaturan server.
+/**
+ * Alamat server yang dipakai sesi ini.
+ *
+ * Urutan: alamat sesi berjalan > penimpaan manual admin > alamat bawaan.
+ *
+ * Penimpaan manual hanya dianggap ada bila admin memang menyetelnya sendiri
+ * lewat panel kode akses; penandanya disimpan terpisah. Tanpa penanda ini,
+ * alamat lama yang tertinggal di sebuah perangkat akan mengalahkan
+ * SERVER_BAWAAN selamanya, sehingga mengganti alamat di berkas HTML tidak
+ * pernah sampai ke perangkat itu.
+ */
 function urlServer() {
-  return S.gasUrl || localStorage.getItem("pjok_gas") || (SERVER_BAWAAN || "").trim() || "";
+  if (S.gasUrl) return S.gasUrl;
+  try {
+    if (localStorage.getItem("pjok_gas_manual") === "1") {
+      const manual = rapi(localStorage.getItem("pjok_gas"));
+      if (manual) return manual;
+    }
+  } catch {}
+  return rapi(SERVER_BAWAAN);
+}
+
+/** Apakah perangkat ini memakai alamat yang disetel manual, bukan bawaan. */
+function pakaiAlamatManual() {
+  try { return localStorage.getItem("pjok_gas_manual") === "1"; } catch { return false; }
 }
 
 async function serverAmbil(action, params = {}) {
@@ -1799,9 +1830,27 @@ function panelServer() {
         <span class="lencana lencana-hijau">Terbuka</span>
       </div>
       <div class="modal-isi">
+        <div style="padding:11px 13px;border-radius:var(--r-m);margin-bottom:14px;
+          background:${rapi(SERVER_BAWAAN) ? "var(--rumput-pias)" : "var(--peluit-pias)"};
+          border:1px solid ${rapi(SERVER_BAWAAN) ? "var(--rumput)" : "var(--peluit)"}">
+          <b style="font-size:13px;display:block;margin-bottom:3px">
+            ${rapi(SERVER_BAWAAN)
+              ? (pakaiAlamatManual() ? "Memakai alamat manual perangkat ini"
+                                     : "Memakai alamat bawaan aplikasi")
+              : "Alamat bawaan belum diisi"}
+          </b>
+          <span class="redup" style="font-size:12.5px">
+            ${rapi(SERVER_BAWAAN)
+              ? (pakaiAlamatManual()
+                 ? "Alamat bawaan sedang ditimpa di perangkat ini. Tekan Kembalikan ke bawaan di bawah kalau tidak disengaja."
+                 : "Setiap perangkat langsung terhubung tanpa perlu diatur. Ini yang disarankan.")
+              : "Isi SERVER_BAWAAN di bagian atas berkas V38.html supaya semua perangkat langsung terhubung tanpa mengetik alamat."}
+          </span>
+        </div>
+
         <p class="redup" style="font-size:13px;margin-bottom:14px">
-          Alamat web app Google Apps Script tempat data sekolah ini disimpan.
-          Salah alamat berarti aplikasi menulis ke spreadsheet yang keliru.
+          Mengisi alamat di sini hanya berlaku untuk perangkat ini. Untuk semua
+          perangkat sekaligus, isi SERVER_BAWAAN di berkas V38.html.
         </p>
         <label class="kolom"><span>URL web app</span>
           <input type="url" id="${id}-url" value="${esc(urlServer())}"
@@ -1814,7 +1863,7 @@ function panelServer() {
             <button class="tbl tbl-blok" style="margin-bottom:8px"
                     onclick="kirimAntrean()">Kirim data yang tertahan</button>
             <button class="tbl tbl-blok" onclick="lupakanServer('${id}')">
-              Lupakan alamat server</button>
+              ${rapi(SERVER_BAWAAN) ? "Kembalikan ke alamat bawaan" : "Lupakan alamat server"}</button>
           </div>
         </details>
       </div>
@@ -1838,7 +1887,12 @@ function panelServer() {
     hasil.style.color = "";
     hasil.textContent = "Menghubungi server...";
     S.gasUrl = url;
-    localStorage.setItem("pjok_gas", url);
+    try {
+      localStorage.setItem("pjok_gas", url);
+      // Penanda bahwa alamat ini disetel manual di perangkat ini, sehingga
+      // sengaja mengalahkan SERVER_BAWAAN.
+      localStorage.setItem("pjok_gas_manual", "1");
+    } catch {}
     const r = await serverAmbil("ping");
     if (r.status === "success") {
       hasil.style.color = "var(--rumput)";
@@ -1853,14 +1907,21 @@ function panelServer() {
 }
 
 function lupakanServer(idModal) {
-  konfirmasi("Lupakan alamat server?",
-    "Aplikasi berhenti menyimpan ke Google Sheets sampai alamatnya diisi lagi. Data yang sudah tersimpan di server tidak ikut terhapus.",
-    "Lupakan", () => {
+  const adaBawaan = !!rapi(SERVER_BAWAAN);
+  konfirmasi("Kembalikan ke alamat bawaan?",
+    adaBawaan
+      ? "Perangkat ini akan kembali memakai alamat yang tertanam di aplikasi. Data yang sudah tersimpan di server tidak ikut terhapus."
+      : "Aplikasi berhenti menyimpan ke Google Sheets sampai alamatnya diisi lagi. Data yang sudah tersimpan di server tidak ikut terhapus.",
+    adaBawaan ? "Kembalikan" : "Lupakan", () => {
       S.gasUrl = "";
-      localStorage.removeItem("pjok_gas");
-      setLampu(false, "Lokal");
+      try {
+        localStorage.removeItem("pjok_gas");
+        localStorage.removeItem("pjok_gas_manual");
+      } catch {}
+      setLampu(!!urlServer(), urlServer() ? "Bawaan" : "Lokal");
       tutupTirai(idModal);
-      toast("Alamat server dilupakan.");
+      toast(adaBawaan ? "Kembali memakai alamat bawaan aplikasi."
+                      : "Alamat server dilupakan.");
     }, true);
 }
 
@@ -6424,7 +6485,11 @@ function tandaHakCipta() {
   S.gelap = localStorage.getItem("pjok_gelap") === "1";
   terapkanMode();
 
-  S.gasUrl = localStorage.getItem("pjok_gas") || "";
+  // S.gasUrl sengaja dibiarkan kosong di sini. urlServer() yang menentukan
+  // alamat mana yang berlaku, lengkap dengan pemeriksaan penanda manual.
+  // Menetapkannya langsung dari localStorage di sini akan mengalahkan
+  // SERVER_BAWAAN, karena S.gasUrl adalah prioritas tertinggi.
+  S.gasUrl = "";
 
   // Tampilkan logo dan latar di layar masuk dari cache lokal, sebelum login.
   // Tanpa ini layar masuk selalu polos sampai seseorang berhasil masuk.
