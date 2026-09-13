@@ -23,7 +23,7 @@
 
   Perlu izin, kerja sama, atau pelaporan penyalahgunaan:
     Instagram : @ryzaraccman
-    YouTube   : @gurumasakini
+    YouTube   : https://www.youtube.com/@Gurumasakiniofc
 
   CATATAN TEKNIS YANG PERLU DIPAHAMI PEMILIK
   Berkas HTML dikirim utuh ke peramban setiap pengunjung, jadi isinya selalu
@@ -248,7 +248,7 @@ tbody tr:last-child td { border-bottom: none; }
   min-height: 100vh; min-height: 100dvh;
   display: flex; flex-direction: column; gap: 18px;
   padding: 14px; position: relative; isolation: isolate;
-  background: var(--kertas);
+  background: var(--kertas); overflow-x: clip;
 }
 
 /* Foto lapangan. Alamat bawaan ditulis di CSS supaya latar sudah tampil
@@ -291,7 +291,12 @@ html[data-gelap="1"] #tirai-masuk {
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
 .pita-sisi { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.pita-nama { font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.pita-sisi:first-child { flex: 1 1 auto; overflow: hidden; }
+.pita-nama {
+  font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pita-sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pita-garis { width: 1px; height: 26px; background: var(--garis); flex: 0 0 1px; }
 .pita-sub { font-size: 12.5px; color: var(--tinta-2); }
 .pita-slogan { font-size: 12px; color: var(--tinta-2); line-height: 1.35; text-align: right; }
@@ -351,8 +356,15 @@ html[data-gelap="1"] .hero-nilai .ikon-bulat { color: #06110c; }
   box-shadow: 0 8px 20px rgba(15,26,21,.10), 0 26px 60px rgba(15,26,21,.14);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
-.merek-kartu { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; }
-.merek-kartu .nama { font-size: 25px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.merek-kartu { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; min-width: 0; }
+.merek-kartu > div { min-width: 0; }
+/* Nama aplikasi di sini BOLEH turun baris — ini judul kartu, bukan baris
+   navigasi. Ukurannya mengikuti lebar layar supaya nama panjang seperti
+   "Asesmen PJOK SDN Ulujami 06 Pagi" tidak menenggelamkan isi kartunya. */
+.merek-kartu .nama {
+  font-size: clamp(17px, 5.2vw, 25px); font-weight: 800;
+  letter-spacing: -.02em; line-height: 1.16; overflow-wrap: anywhere;
+}
 .merek-kartu .sub { font-size: 12.5px; color: var(--tinta-2); margin-top: 3px; }
 
 .logo-kotak {
@@ -398,8 +410,17 @@ html[data-gelap="1"] .hero-nilai .ikon-bulat { color: #06110c; }
   position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
   width: 17px; height: 17px; color: var(--tinta-3); pointer-events: none;
 }
-.kolom-ikon input { padding-left: 38px; padding-top: 11px; padding-bottom: 11px; }
-.kolom-ikon input.ada-mata { padding-right: 42px; }
+/* Penunjuk [type] dipakai sengaja. Aturan ponsel di bawah memakai
+   `input[type=email]` dengan kekhususan yang sama persis dan ditulis
+   belakangan, jadi `padding` ringkasnya menimpa `padding-left` di sini dan
+   ikon naik ke atas teks. Menambah [type] membuat aturan ini (0,2,1) dan
+   menang — tanpa perlu !important yang akan mematikan penyesuaian ponsel
+   lainnya juga. */
+.kolom-ikon input[type] {
+  padding-left: 38px; padding-right: 14px;
+  padding-top: 11px; padding-bottom: 11px;
+}
+.kolom-ikon input[type].ada-mata { padding-right: 42px; }
 .mata-sandi {
   position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
   border: none; background: none; padding: 6px; cursor: pointer;
@@ -480,7 +501,11 @@ html[data-gelap="1"] .hero-nilai .ikon-bulat { color: #06110c; }
 /* ===========================================================================
    RANGKA APLIKASI
    =========================================================================== */
-.rangka { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+/* Jaring pengaman terhadap luapan mendatar. Sengaja `clip`, bukan `hidden`:
+   `hidden` membuat kotak gulir baru dan mematikan position:sticky pada
+   header, sedangkan `clip` hanya memotong. */
+.rangka { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+  overflow-x: clip; }
 
 .puncak {
   position: sticky; top: 0; z-index: 40;
@@ -560,6 +585,33 @@ html[data-gelap="1"] .nav button[aria-current="page"] { color: #06110c; }
 .statistik .label { font-size: 12px; color: var(--tinta-2); margin-top: 5px; }
 
 
+/* --- Rekap presensi bentuk matriks --------------------------------------- */
+.kepala-rekap {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.alih-rekap { display: flex; gap: 6px; }
+.tabel-matriks th.sel-tgl {
+  text-align: center; padding: 6px 4px; min-width: 38px; line-height: 1.1;
+}
+.tabel-matriks th.sel-tgl span { display: block; font-size: 13px; font-weight: 800; }
+.tabel-matriks th.sel-tgl small { display: block; font-size: 10px; color: var(--tinta-2); font-weight: 600; }
+.tabel-matriks .sel-status {
+  text-align: center; font-weight: 700; font-size: 12.5px; padding: 8px 4px;
+}
+.tabel-matriks .st-H { color: var(--rumput); }
+.tabel-matriks .st-S { color: #d1521f; background: rgba(209,82,31,.07); }
+.tabel-matriks .st-I { color: var(--tinta-3); }
+.tabel-matriks .st-A { color: #b42318; background: rgba(180,35,24,.09); }
+.tabel-matriks .st-kosong { color: var(--garis-tebal); }
+/* Kolom nama tetap terlihat saat tabel digeser ke samping — tanpa ini,
+   deretan huruf H/S/I/A kehilangan pemiliknya begitu tanggal ke-8 dilihat. */
+.tabel-matriks .nama-lekat {
+  position: sticky; left: 0; z-index: 1; background: var(--kapur);
+  box-shadow: 1px 0 0 var(--garis); white-space: nowrap;
+}
+.tabel-matriks tbody tr:hover .nama-lekat { background: var(--rumput-pias); }
+
 /* ===========================================================================
    BILAH GURU
    Header dan navigasi disatukan menjadi satu bilah melayang. Dua belas tab
@@ -584,11 +636,29 @@ html[data-gelap="1"] .nav button[aria-current="page"] { color: #06110c; }
   background: var(--kapur); border: 1px solid var(--garis);
   box-shadow: 0 2px 6px rgba(15,26,21,.05), 0 10px 28px rgba(15,26,21,.07);
 }
-.bar-atas { display: flex; align-items: center; gap: 14px; padding-right: 6px; }
-.bar-atas .bar-aksi { margin-left: auto; }
-.bar-merek { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
-.bar-merek .kotak { width: 34px; height: 34px; }
-.bar-merek strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+/* `min-width: 0` di sepanjang rantai flex. Tanpa ini, butir flex menolak
+   menyusut di bawah lebar isinya: nama sekolah yang panjang melebarkan
+   baris melewati layar, dan seluruh halaman ikut bergeser ke kanan
+   sehingga tombol profil tampak keluar dari layar. */
+.bar-atas { display: flex; align-items: center; gap: 14px; padding-right: 6px; min-width: 0; }
+.bar-atas .bar-aksi { margin-left: auto; flex: 0 0 auto; }
+.bar-merek {
+  display: flex; align-items: center; gap: 10px;
+  flex: 1 1 auto; min-width: 0; overflow: hidden;
+}
+.bar-merek > div { min-width: 0; }
+.bar-merek .kotak { width: 34px; height: 34px; flex: 0 0 34px; }
+/* Nama sekolah dipotong, bukan dibiarkan mendorong. Nama utuhnya tetap
+   terbaca lewat atribut title yang dipasang terapkanIdentitas(). */
+.bar-merek strong {
+  display: block; min-width: 0; font-size: 19px; font-weight: 800;
+  letter-spacing: -.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bar-merek small {
+  display: block; font-size: 11px; color: var(--tinta-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* --- Navigasi utama ----------------------------------------------------- */
 /* Sekarang overflow-x:auto aman dipakai: tidak ada lagi menu turun di dalam
@@ -1195,6 +1265,19 @@ html[data-gelap="1"] .dari-saya { color: #06110c; }
 }
 .utas:hover { background: var(--rumput-pias); }
 .utas:last-child { border-bottom: none; }
+/* Lima percakapan terlihat sekaligus; sisanya digulir di dalam kartu.
+   Tingginya dihitung dari tinggi satu baris (12px + 38px + 12px + garis),
+   bukan ditebak, supaya baris keenam terpotong separuh — potongan itulah
+   yang memberi tahu bahwa daftarnya masih berlanjut. */
+.daftar-utas.bisa-gulir {
+  max-height: calc(5 * 63px + 20px); overflow-y: auto;
+  margin-right: -4px; padding-right: 4px;
+  scrollbar-width: thin;
+}
+.daftar-utas.bisa-gulir::-webkit-scrollbar { width: 6px; }
+.daftar-utas.bisa-gulir::-webkit-scrollbar-thumb {
+  background: var(--garis-tebal); border-radius: 999px;
+}
 .utas .isi { flex: 1; min-width: 0; }
 .utas .isi b { display: block; font-size: 14px; }
 .utas .isi small {
@@ -1406,7 +1489,7 @@ body.sudah-masuk .tbl-mengambang { display: none; }
       <p class="hero-sub">Sistem Asesmen Physical Education</p>
       <p class="hero-teks">
         Platform digital untuk memudahkan guru mengelola, menilai, dan memantau
-        perkembangan murid pada mata pelajaran Pendidikan Jasmani,
+        perkembangan peserta didik pada mata pelajaran Pendidikan Jasmani,
         Olahraga, dan Kesehatan.
       </p>
       <div class="hero-nilai">
@@ -1546,9 +1629,14 @@ body.sudah-masuk .tbl-mengambang { display: none; }
         </div>
       </div>
 
+      <!-- Pernyataan "Dilindungi UU No. 28 Tahun 2014" sengaja TIDAK lagi
+           dicetak di layar. Perlindungan hak cipta berlaku sejak karya
+           diwujudkan, bukan karena kalimatnya dipampang, dan pernyataan
+           lengkapnya tetap ada di komentar kepala berkas ini serta pada
+           konstanta HAK_CIPTA di bawah. -->
       <p class="hak-cipta">
-        &copy; 2026 <a href="https://youtube.com/@gurumasakini" target="_blank" rel="noopener">@Gurumasakini</a>
-        &mdash; Oryza Sativa N &middot; Dilindungi UU No. 28 Tahun 2014
+        &copy; 2026 <a href="https://www.youtube.com/@Gurumasakiniofc" target="_blank" rel="noopener">@Gurumasakini</a>
+        &mdash; Oryza Sativa N
       </p>
     </div>
   </div>
@@ -1842,6 +1930,49 @@ const teksBertautan = (t) => {
    teks Date ("Mon Sep 09 2026 00:00:00 GMT+0700"). Mengurutkannya sebagai teks
    membuat nama hari yang tersusun, bukan tanggalnya — itulah sebabnya riwayat
    kehadiran tampil acak. */
+/* Menormalkan tanggal apa pun menjadi "YYYY-MM-DD".
+   Perlu karena `tgl` bisa datang dalam tiga bentuk berbeda dalam satu
+   koleksi: "2026-09-06" dari <input type=date>, "2026-09-05T17:00:00.000Z"
+   kalau sel Spreadsheet bertipe Date, dan "Sun Sep 06 2026 …" kalau nilainya
+   sempat melewati String(Date). Bentuk ketiga itulah yang membuat urutan
+   kolom di Excel tampak menurut abjad — yang diurutkan sebenarnya nama hari:
+   Fri, Mon, Sat, Sun, Thu, Tue, Wed.
+   Perbandingan `a.tgl === b.tgl` juga tidak boleh lagi dipakai langsung:
+   dua bentuk berbeda untuk hari yang sama akan dianggap dua pertemuan. */
+const tglISO = (v) => {
+  if (!v) return "";
+  const s = String(v).trim();
+  const cocokISO = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (cocokISO) return `${cocokISO[1]}-${cocokISO[2]}-${cocokISO[3]}`;
+  // Bentuk lokal: 6/9/2026 atau 06-09-2026 (hari lebih dulu).
+  const cocokLokal = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if (cocokLokal) {
+    return `${cocokLokal[3]}-${String(cocokLokal[2]).padStart(2, "0")}-${String(cocokLokal[1]).padStart(2, "0")}`;
+  }
+  // Bentuk String(Date): "Sun Sep 06 2026 00:00:00 GMT+0700".
+  // Tanggalnya dibaca langsung dari teks, BUKAN lewat new Date(). Teks itu
+  // sudah menyebut tanggal kalender yang dimaksud beserta zonanya; kalau
+  // dilewatkan ke new Date() lalu dibaca dengan getDate(), hasilnya ikut
+  // zona waktu pembaca dan bisa mundur satu hari.
+  const BULAN_ING = { Jan:1, Feb:2, Mar:3, Apr:4, May:5, Jun:6,
+                      Jul:7, Aug:8, Sep:9, Oct:10, Nov:11, Dec:12 };
+  const cocokTeks = s.match(/^[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (cocokTeks && BULAN_ING[cocokTeks[1]]) {
+    return `${cocokTeks[3]}-${String(BULAN_ING[cocokTeks[1]]).padStart(2, "0")}-${String(cocokTeks[2]).padStart(2, "0")}`;
+  }
+  const d = new Date(s);
+  if (isNaN(d)) return "";
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") +
+         "-" + String(d.getDate()).padStart(2, "0");
+};
+
+/* Pembanding urutan tanggal. TIDAK memakai waktuTgl: new Date("13/9/2026")
+   bernilai NaN karena JavaScript membaca angka pertama sebagai bulan, dan
+   waktuTgl memulangkan 0 untuk itu — sehingga tanggal yang tidak terbaca
+   justru melompat ke urutan paling depan. Menormalkan dulu ke ISO membuat
+   perbandingan teks biasa sudah setara dengan perbandingan waktu. */
+const urutTgl = (a, b) => tglISO(a).localeCompare(tglISO(b));
+
 const waktuTgl = (v) => {
   if (!v) return 0;
   const d = new Date(v);
@@ -1850,9 +1981,10 @@ const waktuTgl = (v) => {
 
 /* Kunci bulan "2026-09" untuk pengelompokan. */
 const kunciBulan = (v) => {
-  const d = new Date(v);
-  if (isNaN(d)) return "";
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  // Lewat tglISO supaya bentuk "13/9/2026" dan "Sun Sep 06 2026 …" ikut
+  // terkelompok ke bulan yang benar, bukan terbuang ke kunci kosong.
+  const iso = tglISO(v);
+  return iso ? iso.slice(0, 7) : "";
 };
 
 const namaBulan = (kunci) => {
@@ -1976,7 +2108,7 @@ const LOGO_BAWAAN = `<img src="${IKON_SAPE}" alt="Logo SAPE">`;
    Untuk menggantinya, ubah satu baris di bawah ini saja.
    --------------------------------------------------------------------------- */
 const GAMBAR_PANJI =
-  "https://github.com/ironmen77/penilaianpjok_v38/blob/main/header_image%20(1).png?raw=true";
+  "https://raw.githubusercontent.com/ironmen77/penilaianpjok_v38/main/Latarloginpage.png";
 
 /* Dipasang sebagai variabel CSS supaya aturan mode terang dan mode gelap di
    lembar gaya tetap punya gradiennya masing-masing, sementara alamat gambar
@@ -2028,9 +2160,15 @@ function terapkanIdentitas() {
 
   // Nama aplikasi kustom, jatuh ke nama sekolah, lalu nama bawaan.
   const nama = rapi(m.namaAplikasi) || rapi(m.namaSekolah) || "SAPE";
-  const jt = $("merek-judul"); if (jt) jt.textContent = nama;
-  const jt2 = $("merek-judul-2"); if (jt2) jt2.textContent = nama;
-  const ps = $("puncak-sekolah"); if (ps && S.peran === "guru") ps.textContent = nama;
+  // Nama dipotong secara visual di bilah yang sempit, jadi nama utuhnya
+  // dipasang sebagai title — tersedia saat disentuh lama atau diarahkan
+  // kursor, dan terbaca oleh pembaca layar.
+  ["merek-judul", "merek-judul-2"].forEach(id => {
+    const el = $(id);
+    if (el) { el.textContent = nama; el.title = nama; }
+  });
+  const ps = $("puncak-sekolah");
+  if (ps && S.peran === "guru") { ps.textContent = nama; ps.title = nama; }
   // Judul tab peramban ikut nama sekolah.
   document.title = nama;
 
@@ -2156,11 +2294,43 @@ async function serverKirim(action, data = {}) {
   }
 }
 
+/* Hasil ping terakhir disimpan utuh. Nilai balik tetap boolean supaya semua
+   pemanggil lama tidak perlu diubah, tapi sebab kegagalannya tidak lagi
+   hilang begitu fungsi ini selesai. */
 async function ujiServer() {
   const r = await serverAmbil("ping");
+  S._pingTerakhir = r;
   const nyala = r && r.status === "success";
   setLampu(nyala, nyala ? "Terhubung" : "Lokal");
   return nyala;
+}
+
+/* Menerjemahkan kegagalan ping menjadi sebab dan tindakan yang konkret.
+   Empat kode dari serverAmbil() plus satu kasus yang tidak punya kode sama
+   sekali: server menjawab rapi dalam JSON, tapi isinya penolakan — itu
+   berarti alamatnya benar dan yang salah ada di dalam Apps Script. */
+function sebabGagalPing(r) {
+  const kode = (r && r.kode) || "";
+  const peta = {
+    ERR_TANPA_SERVER: [
+      "Alamat server belum terisi",
+      "Perangkat ini tidak punya alamat web app sama sekali. Buka ⚙ di kanan bawah layar masuk, masukkan kode akses, lalu tempel URL /exec."],
+    ERR_JARINGAN: [
+      "Permintaan tidak sampai ke Google",
+      "Browser gagal mengirim permintaannya. Penyebab paling sering: berkas dibuka dari file:// (klik dua kali dari Downloads), internet putus, atau jaringan sekolah memblokir script.google.com. Kalau login tadi berhasil, kemungkinan besar ini gangguan sesaat — coba lagi."],
+    ERR_HTTP: [
+      "Google membalas dengan kode kesalahan",
+      "Alamatnya terjangkau tapi ditolak. Biasanya deployment belum disetel Execute as: Me dan Who has access: Anyone, atau URL-nya milik deployment lama yang sudah diarsipkan."],
+    ERR_BUKAN_JSON: [
+      "Balasannya bukan JSON",
+      "Alamatnya hidup, tapi yang dikembalikan halaman HTML — hampir selalu halaman masuk Google. Artinya web app dideploy dengan akses \"Anyone with Google account\", bukan \"Anyone\"."]
+  };
+  if (peta[kode]) return { judul: peta[kode][0], uraian: peta[kode][1], kode };
+  return {
+    judul: "Server menjawab, tapi menolak aksi ping",
+    uraian: "Balasannya JSON yang sah, jadi alamat dan izin deployment sudah benar. Yang menolak adalah kode Apps Script-nya sendiri — biasanya karena deployment yang aktif adalah versi lama yang belum mengenal aksi \"ping\". Buka Apps Script, lalu Deploy > Manage deployments > Edit > Version: New version.",
+    kode: kode || "TANPA_KODE"
+  };
 }
 
 function setLampu(nyala, teks) {
@@ -3119,8 +3289,20 @@ async function mulaiAplikasiGuru() {
   bukaTab("dasbor");
   perbaruiBannerAntrean();
 
+  // Ping dipakai untuk lampu status, BUKAN sebagai izin menarik data.
+  // Sebelumnya penarikan digantung pada hasil ping: kalau ping gagal —
+  // termasuk ketika deployment hanya belum mengenal aksi "ping" — aplikasi
+  // diam-diam berjalan dengan salinan lokal saja, dan tidak ada apa pun di
+  // layar yang memberi tahu bahwa datanya tidak diperbarui. Login barusan
+  // sudah membuktikan servernya menjawab, jadi penarikan tetap dicoba dan
+  // kegagalannya ditangani oleh tarikDariServer() sendiri.
   const nyala = await ujiServer();
-  if (nyala) await tarikDariServer();
+  await tarikDariServer();
+  if (!nyala) {
+    setTimeout(() => toast(
+      "Data berhasil dimuat, tapi uji koneksi (ping) gagal. Tekan lampu status di kanan atas untuk melihat sebabnya.",
+      "err"), 900);
+  }
   if (S.kotor.size) kirimAntrean(true);
   terapkanIdentitas();
 }
@@ -3388,7 +3570,7 @@ function gambarPanji() {
 function presensiHariIni() {
   const hariIni = new Date().toISOString().slice(0, 10);
   let hadir = 0, tercatat = 0;
-  S.presensi.filter(p => rapi(p.tgl).slice(0, 10) === hariIni).forEach(p => {
+  S.presensi.filter(p => tglISO(p.tgl) === hariIni).forEach(p => {
     const d = p.dataJSON || {};
     Object.keys(d).forEach(k => { tercatat++; if (d[k] === "H") hadir++; });
   });
@@ -4476,7 +4658,7 @@ function gambarPresensi() {
   const kelas = S._presKelas || "";
   const tgl = S._presTgl || new Date().toISOString().slice(0, 10);
   const daftar = kelas ? siswaKelas(kelas) : [];
-  const rekam = S.presensi.find(p => rapi(p.kelas) === kelas && rapi(p.tgl).slice(0, 10) === tgl);
+  const rekam = S.presensi.find(p => rapi(p.kelas) === kelas && tglISO(p.tgl) === tgl);
   const data = rekam ? (rekam.dataJSON || {}) : {};
 
   $("isi-guru").innerHTML =
@@ -4557,7 +4739,10 @@ function simpanPresensi() {
 
   if (belum) { toast(`${belum} siswa belum ditandai kehadirannya.`, "err"); return; }
 
-  const idx = S.presensi.findIndex(p => rapi(p.kelas) === kelas && rapi(p.tgl).slice(0, 10) === tgl);
+  // Memakai tglISO di sini mencegah pertemuan yang sama tercatat dua kali
+  // ketika salinan lokal dan salinan server menyimpan tanggal dalam bentuk
+  // yang berbeda.
+  const idx = S.presensi.findIndex(p => rapi(p.kelas) === kelas && tglISO(p.tgl) === tgl);
   const rekam = {
     id: idx >= 0 ? S.presensi[idx].id : uid("P"),
     kelas, tgl, dataJSON: data, catatanJSON: {}, timestamp: kini()
@@ -4568,26 +4753,83 @@ function simpanPresensi() {
   toast(`Presensi ${kelas} tanggal ${tglIndo(tgl)} tersimpan.`, "ok");
 }
 
+/* Rekap presensi punya dua cara baca yang sama sahnya, jadi keduanya
+   disediakan dan bisa ditukar:
+   - Ringkas: siapa yang kehadirannya bermasalah (H/S/I/A + persentase).
+   - Tanggal: hari mana yang banyak bolong (matriks nama x tanggal).
+   Matriks adalah tampilan yang sama dengan berkas Excel, sehingga apa yang
+   terlihat di layar dan apa yang terunduh tidak pernah berbeda. */
 function gambarRekapPresensi(kelas, daftar) {
-  const rekam = S.presensi.filter(p => rapi(p.kelas) === kelas);
+  const rekam = S.presensi.filter(p => rapi(p.kelas) === kelas)
+    .sort((a, b) => urutTgl(a.tgl, b.tgl));
   if (!rekam.length) return `<p class="redup">Belum ada pertemuan yang tercatat untuk rombel ini.</p>`;
 
-  const baris = daftar.map(s => {
-    const hitung = { H:0, S:0, I:0, A:0 };
-    rekam.forEach(p => { const st = (p.dataJSON || {})[s.id]; if (st && hitung[st] !== undefined) hitung[st]++; });
-    const persen = rekam.length ? Math.round(hitung.H / rekam.length * 100) : 0;
-    return `<tr>
-      <td><b>${esc(s.nama)}</b></td>
-      <td class="angka">${hitung.H}</td><td class="angka">${hitung.S}</td>
-      <td class="angka">${hitung.I}</td><td class="angka">${hitung.A}</td>
-      <td><span class="lencana ${persen >= 85 ? "lencana-hijau" : persen >= 70 ? "lencana-oranye" : "lencana-merah"}">${persen}%</span></td>
-    </tr>`;
-  }).join("");
+  const mode = S._rekapPresMode === "tanggal" ? "tanggal" : "ringkas";
+  const hitungSiswa = (s) => {
+    const c = { H:0, S:0, I:0, A:0 };
+    rekam.forEach(p => { const st = (p.dataJSON || {})[s.id]; if (st && c[st] !== undefined) c[st]++; });
+    return c;
+  };
+  const lencanaPersen = (persen) =>
+    `<span class="lencana ${persen >= 85 ? "lencana-hijau" : persen >= 70 ? "lencana-oranye" : "lencana-merah"}">${persen}%</span>`;
 
-  return `<p class="redup" style="margin-bottom:10px">${rekam.length} pertemuan tercatat.</p>
-    <div class="bungkus-tabel"><table>
+  const pengalih = `
+    <div class="alih-rekap">
+      <button class="tbl tbl-kecil ${mode === "ringkas" ? "tbl-utama" : ""}"
+              onclick="S._rekapPresMode='ringkas';gambarPresensi()">Ringkas</button>
+      <button class="tbl tbl-kecil ${mode === "tanggal" ? "tbl-utama" : ""}"
+              onclick="S._rekapPresMode='tanggal';gambarPresensi()">Per tanggal</button>
+    </div>`;
+
+  let tabel;
+  if (mode === "ringkas") {
+    const baris = daftar.map(s => {
+      const c = hitungSiswa(s);
+      const persen = rekam.length ? Math.round(c.H / rekam.length * 100) : 0;
+      return `<tr>
+        <td><b>${esc(s.nama)}</b></td>
+        <td class="angka">${c.H}</td><td class="angka">${c.S}</td>
+        <td class="angka">${c.I}</td><td class="angka">${c.A}</td>
+        <td>${lencanaPersen(persen)}</td>
+      </tr>`;
+    }).join("");
+    tabel = `<div class="bungkus-tabel"><table>
       <thead><tr><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Kehadiran</th></tr></thead>
+      <tbody>${baris}</tbody></table></div>`;
+  } else {
+    const tahun = new Set(rekam.map(p => tglISO(p.tgl).slice(0, 4)));
+    const kepalaTgl = rekam.map(p => {
+      const iso = tglISO(p.tgl);
+      const d = iso ? new Date(iso + "T00:00:00") : null;
+      if (!d) return `<th>-</th>`;
+      const bln = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][d.getMonth()];
+      return `<th class="sel-tgl" title="${esc(tglIndo(iso))}">
+        <span>${String(d.getDate()).padStart(2, "0")}</span><small>${bln}${tahun.size > 1 ? " " + String(d.getFullYear()).slice(2) : ""}</small></th>`;
+    }).join("");
+
+    const baris = daftar.map(s => {
+      const c = hitungSiswa(s);
+      const persen = rekam.length ? Math.round(c.H / rekam.length * 100) : 0;
+      const sel = rekam.map(p => {
+        const st = (p.dataJSON || {})[s.id] || "";
+        return `<td class="sel-status st-${esc(st || "kosong")}">${esc(st || "·")}</td>`;
+      }).join("");
+      return `<tr><td class="nama-lekat"><b>${esc(s.nama)}</b></td>${sel}
+        <td>${lencanaPersen(persen)}</td></tr>`;
+    }).join("");
+
+    tabel = `<div class="bungkus-tabel"><table class="tabel-matriks">
+      <thead><tr><th class="nama-lekat">Nama</th>${kepalaTgl}<th>Hadir</th></tr></thead>
       <tbody>${baris}</tbody></table></div>
+      <p class="redup" style="font-size:11.5px;margin-top:8px">
+        H hadir &middot; S sakit &middot; I izin &middot; A alfa &middot; titik berarti belum ditandai.
+        Geser tabel ke samping untuk melihat tanggal lainnya.</p>`;
+  }
+
+  return `<div class="kepala-rekap">
+      <p class="redup">${rekam.length} pertemuan tercatat.</p>${pengalih}
+    </div>
+    ${tabel}
     <button class="tbl tbl-kecil" style="margin-top:12px" onclick="unduhPresensi()">Unduh Excel</button>`;
 }
 </script>
@@ -6311,10 +6553,77 @@ function pratayangIdentitas() {
 async function bukaPengaturanServer() {
   if (!urlServer()) { bukaAdmin(); return; }
   setLampu(false, "Menguji");
-  const nyala = await ujiServer();
-  toast(nyala ? "Server merespons normal."
-              : "Server tidak merespons. Minta pemasang aplikasi memeriksa alamatnya.",
-        nyala ? "ok" : "err");
+
+  let nyala = await ujiServer();
+  // Satu percobaan ulang. Apps Script yang lama menganggur butuh beberapa
+  // detik untuk bangun dan permintaan pertama kerap kehabisan waktu; tanpa
+  // percobaan kedua, keadaan sehat sering dilaporkan sebagai mati.
+  if (!nyala && (S._pingTerakhir || {}).kode === "ERR_JARINGAN") {
+    await new Promise(r => setTimeout(r, 1200));
+    nyala = await ujiServer();
+  }
+
+  if (nyala) {
+    const v = (S._pingTerakhir || {}).versi;
+    toast("Server merespons normal." + (v ? ` Backend versi ${v}.` : ""), "ok");
+    return;
+  }
+  panelDiagnosaServer();
+}
+
+/* Panel diagnosa. Menampilkan sebab, tindakan, alamat yang benar-benar
+   dipakai, dan balasan mentah dari server — supaya "server tidak merespons"
+   berhenti menjadi tebak-tebakan. */
+function panelDiagnosaServer() {
+  const r = S._pingTerakhir || {};
+  const s = sebabGagalPing(r);
+  const url = urlServer();
+  // Bagian tengah URL disamarkan: cukup untuk membedakan dua deployment,
+  // tanpa memampang tautan yang bisa dipakai orang lain begitu saja.
+  const urlAman = url.length > 62
+    ? url.slice(0, 46) + "……" + url.slice(-14) : url;
+  const asal = pakaiAlamatManual()
+    ? "alamat manual yang disimpan di perangkat ini"
+    : "alamat bawaan yang tertanam di berkas aplikasi";
+
+  const id = uid("diag");
+  const w = document.createElement("div");
+  w.className = "tirai"; w.id = id;
+  w.innerHTML = `
+    <div class="modal" style="max-width:520px" role="dialog" aria-modal="true">
+      <div class="modal-kepala"><h3>Uji koneksi gagal</h3>
+        <span class="lencana lencana-oranye">${esc(s.kode)}</span></div>
+      <div class="modal-isi">
+        <b style="display:block;font-size:14px;margin-bottom:6px">${esc(s.judul)}</b>
+        <p class="redup" style="font-size:13.5px;line-height:1.55">${esc(s.uraian)}</p>
+
+        <div style="margin-top:16px;padding:11px 13px;border-radius:var(--r-m);
+             background:var(--kertas);border:1px solid var(--garis)">
+          <div style="font-size:11.5px;font-weight:700;color:var(--tinta-2);
+               letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">
+            Yang sedang diuji</div>
+          <div style="font-size:12px;word-break:break-all;font-family:var(--font-angka)">
+            ${esc(urlAman)}</div>
+          <div class="redup" style="font-size:12px;margin-top:5px">Dari ${esc(asal)}.</div>
+          ${r.message ? `<div class="redup" style="font-size:12px;margin-top:7px;
+             padding-top:7px;border-top:1px solid var(--garis)">
+             Balasan server: ${esc(r.message)}</div>` : ""}
+        </div>
+
+        <p class="redup" style="font-size:12.5px;margin-top:12px">
+          Kalau kamu tetap bisa masuk dan datanya benar, artinya jalur ke server
+          sebenarnya hidup dan hanya aksi <b>ping</b> yang bermasalah.
+        </p>
+      </div>
+      <div class="modal-kaki">
+        <button class="tbl" onclick="tutupTirai('${id}')">Tutup</button>
+        <button class="tbl" onclick="bukaAdmin()">Buka pengaturan server</button>
+        <button class="tbl tbl-utama" onclick="tutupTirai('${id}');bukaPengaturanServer()">
+          Uji ulang</button>
+      </div>
+    </div>`;
+  $("rak-modal").appendChild(w);
+  w.onclick = (e) => { if (e.target === w) tutupTirai(id); };
 }
 
 function bersihkanLokal() {
@@ -6478,11 +6787,23 @@ function unduhNilai() {
 
 function unduhPresensi() {
   const kelas = S._presKelas;
+  // Diurutkan menurut waktu sungguhan, bukan menurut abjad teksnya.
   const rekam = S.presensi.filter(p => rapi(p.kelas) === kelas)
-    .sort((a, b) => rapi(a.tgl).localeCompare(rapi(b.tgl)));
+    .sort((a, b) => urutTgl(a.tgl, b.tgl));
   const daftar = siswaKelas(kelas);
 
-  const baris = [["No", "Nama", ...rekam.map(p => rapi(p.tgl).slice(0, 10)), "H", "S", "I", "A", "% Hadir"]];
+  // Judul kolom memakai bentuk pendek "06 Sep" supaya muat, dengan tahun
+  // hanya ketika rekaman melintasi lebih dari satu tahun.
+  const tahun = new Set(rekam.map(p => tglISO(p.tgl).slice(0, 4)));
+  const judulTgl = (p) => {
+    const iso = tglISO(p.tgl);
+    if (!iso) return "-";
+    const d = new Date(iso + "T00:00:00");
+    const bln = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][d.getMonth()];
+    return String(d.getDate()).padStart(2, "0") + " " + bln + (tahun.size > 1 ? " " + d.getFullYear() : "");
+  };
+
+  const baris = [["No", "Nama", ...rekam.map(judulTgl), "H", "S", "I", "A", "% Hadir"]];
   daftar.forEach((s, i) => {
     const hitung = { H:0, S:0, I:0, A:0 };
     const row = [i + 1, s.nama];
@@ -6939,7 +7260,7 @@ function portalCapaian() {
 function portalHadir() {
   const s = S.siswaAktif;
   // Diurutkan sebagai waktu, bukan teks. Terbaru di atas.
-  const rekam = S.presensi.slice().sort((a, b) => waktuTgl(b.tgl) - waktuTgl(a.tgl));
+  const rekam = S.presensi.slice().sort((a, b) => urutTgl(b.tgl, a.tgl));
 
   const hitung = { H:0, S:0, I:0, A:0 };
   rekam.forEach(p => { const st = (p.dataJSON || {})[s.idSiswa]; if (hitung[st] !== undefined) hitung[st]++; });
@@ -6978,7 +7299,7 @@ function portalHadir() {
       </div>
 
       ${urutBulan.map(kb => {
-        const daftar = bulan[kb].slice().sort((a, b) => waktuTgl(a.tgl) - waktuTgl(b.tgl));
+        const daftar = bulan[kb].slice().sort((a, b) => urutTgl(a.tgl, b.tgl));
         const h = { H:0, S:0, I:0, A:0 };
         daftar.forEach(p => { const st = (p.dataJSON || {})[s.idSiswa]; if (h[st] !== undefined) h[st]++; });
         const pb = daftar.length ? Math.round(h.H / daftar.length * 100) : 0;
@@ -7425,6 +7746,9 @@ async function gambarPesan() {
         <h2>Percakapan berjalan</h2>
         ${belumDibaca() ? `<span class="lencana lencana-oranye">${belumDibaca()} belum dibaca</span>` : ""}
       </div>
+      ${CHAT.daftar.length > 5 ? `<p class="redup" style="font-size:12px;margin-bottom:6px">
+          ${CHAT.daftar.length} percakapan &middot; gulir daftar untuk melihat sisanya</p>` : ""}
+      <div class="daftar-utas${CHAT.daftar.length > 5 ? " bisa-gulir" : ""}">
       ${CHAT.daftar.length ? CHAT.daftar.map(p => `
         <div class="utas" onclick="bukaUtas('${esc(p.id_siswa)}','${esc(p.nama_siswa || "Siswa")}','${esc(p.nama_rombel || "")}')">
           <div class="avatar" style="width:38px;height:38px;font-size:13px">${esc(inisial(p.nama_siswa))}</div>
@@ -7436,6 +7760,7 @@ async function gambarPesan() {
           <span class="redup" style="font-size:11px;white-space:nowrap">${esc(jamPesan(p.pesan_terakhir))}</span>
         </div>`).join("")
         : kosong("Belum ada percakapan", "Mulai percakapan baru dengan memilih siswa di bawah.")}
+      </div>
     </div>
 
     <div class="kartu">
